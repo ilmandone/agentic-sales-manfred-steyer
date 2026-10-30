@@ -18,28 +18,38 @@ import {
   details,
   type AggregateQuery,
   type DetailsQuery,
+  type Filter,
 } from './sales/sales-api';
 
 const MAX_RESULT_CHARS = 50_000;
 const TIMEOUT_MS = 30_000;
 
+const BLOCK_HINT =
+  'Several statements need a block in parentheses: ( $a := 1; $b := 2; $a + $b )';
+
 export const jsonataDescription = `
     Functions:
       \`$aggregate({ "fact", "aggregateFn", "dimensions", "filter" })\` returns rows like
-        \`{ "Country": "Germany", "value": 123.4 }\`
+        \`{ "Country": "Germany", "value": 123.4 }\`. "aggregateFn" is "sum", "avg", "count"
+        or "count_distinct", e.g. orders: \`{ "fact": "TransactionId", "aggregateFn": "count_distinct" }\`
       \`$details({ "columns", "filter", "sort", "limit", "offset" })\` returns
         \`{ "rows", "totalCount" }\`, limit up to 1000
-    Here, \`filter\` is a plain object with a single value per column, e.g.
-    \`{ "Country": "Germany" }\`, not a list like
-    \`[{ "column": "Country", "value": "Germany" }]\`. For several values, add the column
-    as a dimension and select the rows, e.g. \`$rows[Continent in ["Europe", "Americas"]]\`.
+    Here, \`filter\` is a plain object with a value or a list of values per column, e.g.
+    \`{ "ItemCategory": "Bags", "Continent": ["Europe", "Americas"] }\`, not a list like
+    \`[{ "column": "Country", "value": "Germany" }]\`. A filter can't exclude values: load
+    the rows and select them in JSONata, e.g.
+      \`$aggregate({ "fact": "Revenue", "aggregateFn": "sum", "dimensions": ["ItemCategory"] })[ItemCategory != "(not set)"]\`
+    not \`"filter": { "ItemCategory": { "$ne": "(not set)" } }\`.
     Only "fact", "aggregateFn" and "dimensions" of $aggregate are required. Leave out the
     keys you don't need instead of passing empty values: \`{ "ItemName": "" }\` selects
     the rows with an empty ItemName, i.e. none.
 
-    The value of the expression is the result. Bind intermediate results with \`:=\` in a
-    block \`( ...; ...; ... )\`. JSONata unwraps arrays with a single item: append \`[]\`
-    to a path that must return an array, e.g. \`$rows.{ "label": Country }[]\`.
+    The value of the expression is the result. Several statements need a block in
+    parentheses, with \`;\` between them and the result as the last statement:
+      Right: ( $rows := $aggregate({ ... }); $rows.{ "label": Country, "value": value }[] )
+      Wrong: $rows := $aggregate({ ... }); $rows.{ "label": Country, "value": value }[]
+    JSONata unwraps arrays with a single item: append \`[]\` to a path that must return an
+    array, e.g. \`$rows.{ "label": Country }[]\`.
 
     JSONata is not JavaScript:
       Sort with the order-by operator, e.g. \`$rows^(>value)\` for descending values. A
@@ -52,10 +62,19 @@ export const jsonataDescription = `
       A function body with several statements needs its own block, e.g.
         \`function($c) { ( $x := $rows[Continent = $c]; { "continent": $c, "rows": $x } ) }\`.
 
-    The 7 largest items plus "Other" for the rest:
-      ( $slices := $rows.{ "label": ItemName, "value": value }^(>value);
+    The 7 largest items plus "Other" for the rest, e.g. the products of a category in a
+    continent. Load exactly the rows the question asks for, here with both filters:
+      ( $rows := $aggregate({ "fact": "Revenue", "aggregateFn": "sum", "dimensions": ["ItemName"], "filter": { "ItemCategory": "Bags", "Continent": "Europe" } });
+        $slices := $rows.{ "label": ItemName, "value": value }^(>value);
         $rest := $slices[[7..$count($slices)]];
         $append($slices[[0..6]], $rest ? { "label": "Other", "value": $sum($rest.value) } : []) )
+
+    One result per value of a dimension in an answer, e.g. the products per continent.
+    For one chart per value, set splitBy instead and compute the data of one chart. Bind
+    the value before filtering, because \`$\` inside \`[...]\` is the filtered row:
+      ( $rows := $aggregate({ "fact": "Revenue", "aggregateFn": "sum", "dimensions": ["Continent", "ItemName"], "filter": { "ItemCategory": "Bags" } });
+        $distinct($rows.Continent).( $c := $;
+          { "continent": $c, "slices": $rows[Continent = $c].{ "label": ItemName, "value": value }^(>value)[] } )[] )
 
     The 7 largest series plus "Other" per label, as bars of a bar chart:
       ( $rows := $aggregate({ "fact": "Revenue", "aggregateFn": "sum", "dimensions": ["Continent", "ItemCategory"] });
@@ -64,6 +83,11 @@ export const jsonataDescription = `
         $other := $rows[$not(ItemCategory in $top)]{ Continent: $sum(value) };
         $append($rows[ItemCategory in $top].{ "label": Continent, "series": ItemCategory, "value": value },
           $each($other, function($v, $k) { { "label": $k, "series": "Other", "value": $v } })) )
+
+    Compare each row with the previous one, e.g. the growth from month to month in percent:
+      ( $rows := $aggregate({ "fact": "Revenue", "aggregateFn": "sum", "dimensions": ["Month"] })^(Month);
+        $map($rows[[1..$count($rows)]], function($r, $i) {
+          { "label": $r.Month, "value": $round(($r.value - $rows[$i].value) / $rows[$i].value * 100, 1) } }) )
 `;
 
 export const jsonataLimitsDescription = `
@@ -76,7 +100,7 @@ export const evaluateJsonata = createTool({
   id: 'evaluate-jsonata',
   description: `
     Evaluates a JSONata expression for calculations the aggregation API can't do,
-    e.g. shares, growth rates, rankings or order counts.
+    e.g. shares, growth rates or rankings.
     ${jsonataDescription}
     ${jsonataLimitsDescription}
   `,
@@ -95,9 +119,12 @@ export const evaluateJsonata = createTool({
     evaluateExpression(expression, context),
 });
 
+export class EmptyResultError extends Error {}
+
 export async function evaluateExpression(
   expression: string,
   context?: ApprovalContext,
+  filter: Filter = {},
 ): Promise<{ result: unknown } | NotExecuted> {
   const agent = context?.agent;
   const approval = agent?.resumeData;
@@ -120,24 +147,22 @@ export async function evaluateExpression(
       );
     }
   };
+  const compiled = compile(expression);
   let result: unknown;
 
   try {
-    result = await jsonata(expression, { timeout: TIMEOUT_MS }).evaluate(
-      undefined,
-      {
-        aggregate: async (query: AggregateQuery) => {
-          const { rowCount, rows } = await aggregate(query);
-          checkRowLimit(rowCount);
-          return rows;
-        },
-        details: async (query: DetailsQuery) => {
-          const { rows, totalCount } = await details(query);
-          checkRowLimit(totalCount);
-          return { rows, totalCount };
-        },
+    result = await compiled.evaluate(undefined, {
+      aggregate: async (query: AggregateQuery) => {
+        const { rowCount, rows } = await aggregate(withFilter(query, filter));
+        checkRowLimit(rowCount);
+        return rows;
       },
-    );
+      details: async (query: DetailsQuery) => {
+        const { rows, totalCount } = await details(withFilter(query, filter));
+        checkRowLimit(totalCount);
+        return { rows, totalCount };
+      },
+    });
   } catch (err) {
     if (tooLarge === undefined) throw toError(err);
   }
@@ -146,7 +171,7 @@ export async function evaluateExpression(
     return askForApproval(context, tooLarge);
   }
   if (result === undefined) {
-    throw new Error(
+    throw new EmptyResultError(
       'The expression returned nothing. Check the field names and filter values.',
     );
   }
@@ -160,10 +185,66 @@ export async function evaluateExpression(
   return { result };
 }
 
+function compile(expression: string): jsonata.Expression {
+  try {
+    return jsonata(expression, { timeout: TIMEOUT_MS });
+  } catch (error) {
+    if (!isMissingBlock(error)) {
+      throw toError(error);
+    }
+    return compileAsBlock(expression, toError(error));
+  }
+}
+
+function compileAsBlock(
+  expression: string,
+  original: Error,
+): jsonata.Expression {
+  try {
+    return jsonata(`( ${expression} )`, { timeout: TIMEOUT_MS });
+  } catch {
+    throw original;
+  }
+}
+
+function withFilter<T extends { filter?: Filter }>(
+  query: T,
+  filter: Filter,
+): T {
+  return { ...query, filter: { ...query.filter, ...filter } };
+}
+
+function isMissingBlock(error: unknown): boolean {
+  const { code, token } = error as jsonata.JsonataError;
+  return code === 'S0201' && token === ';';
+}
+
 function toError(error: unknown): Error {
   if (error instanceof Error) {
     return error;
   }
-  const { code, message, position } = error as jsonata.JsonataError;
-  return new Error(`JSONata ${code} at position ${position}: ${message}`);
+  const jsonataError = error as jsonata.JsonataError;
+  const { code, message, position } = jsonataError;
+  const sentence = /[.?!]$/.test(message) ? message : `${message}.`;
+  const hint = toHint(jsonataError);
+  return new Error(
+    `JSONata ${code} at position ${position}: ${sentence}${hint ? ` ${hint}` : ''}`,
+  );
+}
+
+function toHint(error: jsonata.JsonataError): string {
+  const { code, token } = error;
+  if (isMissingBlock(error)) {
+    return BLOCK_HINT;
+  }
+  if (code === 'S0202' && token === '..') {
+    return 'Select by position with a range in double brackets, e.g. $rows[[0..6]].';
+  }
+  if (code === 'S0202' && token === '|') {
+    return 'JSONata has no pipes: nest the function calls, e.g. $count($rows).';
+  }
+  if (code === 'T1006') {
+    return `$${token} is no function: use the built-in JSONata functions, $aggregate and $details.`;
+  }
+  return '';
 }

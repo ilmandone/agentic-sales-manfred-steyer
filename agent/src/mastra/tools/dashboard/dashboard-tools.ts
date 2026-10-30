@@ -1,6 +1,6 @@
 import { createTool, type ToolExecutionContext } from '@mastra/core/tools';
 import { dashboardSchema } from '@shared/dashboard-schema';
-import { querySchema } from '@shared/query-schema';
+import { querySchema, type Query } from '@shared/query-schema';
 import { z } from 'zod';
 import { evaluateQuery } from '../run-query';
 import { readDashboard, writeDashboard, type MemoryIds } from './dashboard-api';
@@ -18,7 +18,7 @@ export const addDashboardItem = createTool({
   inputSchema: z.object({ spec: querySchema }),
   outputSchema: dashboardSchema,
   execute: async ({ spec }, context) => {
-    await evaluateQuery(spec);
+    await assertQueryRuns(spec);
     const memoryIds = getMemoryIds(context);
     const items = await readDashboard(memoryIds);
     const updatedItems = [...items, { id: crypto.randomUUID(), spec }];
@@ -36,7 +36,7 @@ export const updateDashboardItem = createTool({
   inputSchema: z.object({ id: idSchema, spec: querySchema }),
   outputSchema: dashboardSchema,
   execute: async ({ id, spec }, context) => {
-    await evaluateQuery(spec);
+    await assertQueryRuns(spec);
     const memoryIds = getMemoryIds(context);
     const items = await readDashboard(memoryIds);
     const updatedItems = items.map((item) =>
@@ -80,6 +80,15 @@ export const removeDashboardItem = createTool({
     return { items: updatedItems };
   },
 });
+
+async function assertQueryRuns(spec: Query): Promise<void> {
+  try {
+    await evaluateQuery(spec);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`The dashboard was not changed: ${message}`);
+  }
+}
 
 function indexOrEnd(ids: string[], id: string): number {
   const index = ids.indexOf(id);

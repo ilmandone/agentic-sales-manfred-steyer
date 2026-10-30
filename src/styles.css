@@ -274,6 +274,32 @@ select:disabled {
   box-shadow: var(--focus-ring);
 }
 
+app-query-result-view .split-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+  gap: 1rem;
+}
+
+app-dashboard-tile:has(.split-charts) {
+  grid-column: 1 / -1;
+}
+
+app-run-info .run-warning {
+  margin: 0.5rem 0 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--status-serious-soft);
+  color: var(--status-serious);
+  font-size: 0.8rem;
+}
+
+app-run-info .run-info {
+  margin: 0.25rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  text-align: right;
+}
+
 app-interrupt-list .interrupt {
   display: flex;
   gap: 0.75rem;

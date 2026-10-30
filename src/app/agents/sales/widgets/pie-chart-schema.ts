@@ -13,4 +13,9 @@ export const pieChartSchema = z.object({
     ),
 });
 
+export const pieChartDescription = `
+  Shows shares of a whole (sum or count, never avg) as a pie chart in the chat.
+  Use at most 8 slices and combine the smallest ones into a slice named "Other".
+`;
+
 export type PieChartArgs = z.infer<typeof pieChartSchema>;

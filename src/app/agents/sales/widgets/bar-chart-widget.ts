@@ -6,7 +6,11 @@ import {
 } from '@copilotkit/angular';
 import { BarChart } from '../../../shared/charts/bar-chart';
 import { LoadingIndicator } from '../../../shared/loading-indicator';
-import { BarChartArgs, barChartSchema } from './bar-chart-schema';
+import {
+  BarChartArgs,
+  barChartDescription,
+  barChartSchema,
+} from './bar-chart-schema';
 
 @Component({
   selector: 'app-bar-chart-widget',
@@ -36,11 +40,7 @@ export class BarChartWidget implements ToolRenderer<BarChartArgs> {
 
 export const barChartWidget: RegisterComponentConfig<BarChartArgs> = {
   name: 'barChart',
-  description: `
-    Shows values of one or two dimensions as a bar chart in the chat. Use it for comparisons
-    and trends, e.g. revenue per week or per country. For two dimensions, pass the second
-    one as series: the bars are grouped per label with one color per series (at most 8).
-  `,
+  description: barChartDescription,
   parameters: barChartSchema,
   component: BarChartWidget,
 };

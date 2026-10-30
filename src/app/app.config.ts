@@ -16,7 +16,7 @@ export const appConfig: ApplicationConfig = {
 
     provideCopilotKit({
       defaultToolRendering: true,
-      enableInspector: false,
+      enableInspector: true,
     }),
     provideAppInitializer(initSalesAgent),
     provideAppInitializer(initDashboardAgent),

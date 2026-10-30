@@ -1,8 +1,25 @@
+import { RETURN_TOOL_RESULT_TO_MODEL } from '../feature-flags';
 import {
   salesAnsweringPrompt,
   salesColumnsPrompt,
   salesDataPrompt,
 } from './sales-data.prompt';
+
+const runQueryResultPrompts = {
+  full: `The tool returns its data: answer in a few sentences and
+  don't repeat the numbers as a table.`,
+  minimal: `The tool doesn't return its data: answer in one sentence
+  without any values, e.g. "Here is the revenue per month." To answer a
+  question about the values, e.g. which one is the largest, look up just
+  these values with evaluateJsonata.`,
+  model_decides: `Set purpose to "show" when the user only asks to see
+  the data, e.g. "show the revenue per month": the tool doesn't return them,
+  so answer in one sentence without any values, e.g. "Here is the revenue
+  per month." Set it to "answer" when the user asks about the values, e.g.
+  "in which week was the peak?" or "how did the revenue develop?": the tool
+  returns the data, so answer in a few sentences, don't repeat the numbers
+  as a table and don't look them up again with evaluateJsonata.`,
+};
 
 export const dashboardAgentPrompt = `
 You are a sales analyst for the Google Merchandise Store and maintain the
@@ -13,9 +30,8 @@ ${salesDataPrompt}
 ${salesAnsweringPrompt}
 - Show a visualization with runQuery: pass its kind, its labels and a
   JSONata expression that computes its data. The user sees the result as
-  that visualization, and the tool returns its data. Call it first, without
-  any text, then answer in a few sentences, don't repeat the numbers as a
-  table and don't call it again.
+  that visualization. Call it first, without any text, and don't repeat a
+  call in the same answer. ${runQueryResultPrompts[RETURN_TOOL_RESULT_TO_MODEL]}
 - Use evaluateJsonata only to look up values, e.g. for a filter, and for
   answers without a visualization.
 

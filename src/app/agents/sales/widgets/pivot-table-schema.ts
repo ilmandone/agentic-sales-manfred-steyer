@@ -25,4 +25,9 @@ export const pivotTableSchema = z.object({
     ),
 });
 
+export const pivotTableDescription = `
+  Shows values of two dimensions as a table in the chat: the first dimension spans
+  the rows, the second one the columns. Use it when exact values matter.
+`;
+
 export type PivotTableArgs = z.infer<typeof pivotTableSchema>;

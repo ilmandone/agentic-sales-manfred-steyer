@@ -14,6 +14,8 @@
     "server:typecheck": "tsc -p server/tsconfig.json",
     "agent": "mastra dev --dir agent/src/mastra --env .env",
     "agent:typecheck": "tsc -p agent/tsconfig.json",
+    "eval": "node eval/eval.ts",
+    "eval:typecheck": "tsc -p eval/tsconfig.json",
     "dev": "concurrently -n server,agent,client -c blue,magenta,green \"npm run server\" \"npm run agent\" \"npm run client\"",
     "lint": "ng lint",
     "prepare": "husky",

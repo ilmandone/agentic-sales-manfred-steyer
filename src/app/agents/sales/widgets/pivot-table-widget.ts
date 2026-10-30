@@ -6,7 +6,11 @@ import {
 } from '@copilotkit/angular';
 import { PivotTable } from '../../../shared/charts/pivot-table';
 import { LoadingIndicator } from '../../../shared/loading-indicator';
-import { PivotTableArgs, pivotTableSchema } from './pivot-table-schema';
+import {
+  PivotTableArgs,
+  pivotTableDescription,
+  pivotTableSchema,
+} from './pivot-table-schema';
 
 @Component({
   selector: 'app-pivot-table-widget',
@@ -36,10 +40,7 @@ export class PivotTableWidget implements ToolRenderer<PivotTableArgs> {
 
 export const pivotTableWidget: RegisterComponentConfig<PivotTableArgs> = {
   name: 'pivotTable',
-  description: `
-    Shows values of two dimensions as a table in the chat: the first dimension spans
-    the rows, the second one the columns. Use it when exact values matter.
-  `,
+  description: pivotTableDescription,
   parameters: pivotTableSchema,
   component: PivotTableWidget,
 };

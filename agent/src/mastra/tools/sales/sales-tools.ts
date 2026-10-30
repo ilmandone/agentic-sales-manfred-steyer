@@ -38,8 +38,9 @@ const approvalNote = `
 export const aggregateSales = createTool({
   id: 'aggregate-sales',
   description: `
-    Aggregates the sales table: applies avg, sum, or count to a fact column,
-    grouped by 1-2 dimension columns, optionally filtered by exact-match values.
+    Aggregates the sales table: applies avg, sum, count or count_distinct to a fact
+    column, grouped by 1-2 dimension columns, optionally filtered by exact-match values.
+    count_distinct counts distinct values, e.g. orders with the fact "TransactionId".
     Results are sorted by the dimensions.
     ${approvalNote}
   `,
@@ -47,7 +48,7 @@ export const aggregateSales = createTool({
     fact: z
       .string()
       .describe('Fact column to aggregate, e.g. "Revenue" or "Quantity"'),
-    aggregateFn: z.enum(['avg', 'sum', 'count']),
+    aggregateFn: z.enum(['avg', 'sum', 'count', 'count_distinct']),
     dimensions: z
       .array(z.string())
       .min(1)

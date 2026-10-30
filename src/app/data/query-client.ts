@@ -14,7 +14,7 @@ export class QueryClient {
     return httpResource<QueryResult>(() => ({
       url: RUN_QUERY_URL,
       method: 'POST',
-      body: { data: { spec: requestedSpec() } },
+      body: { data: { spec: requestedSpec(), purpose: 'show' } },
     }));
   }
 }

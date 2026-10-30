@@ -1,17 +1,21 @@
 const BASE_URL = process.env.AGG_SERVER_URL ?? 'http://localhost:3000';
 
-export type FilterValue = string | number | boolean;
+export type FilterScalar = string | number | boolean;
+
+export type FilterValue = FilterScalar | FilterScalar[];
+
+export type Filter = Record<string, FilterValue>;
 
 export interface AggregateQuery {
   fact: string;
-  aggregateFn: 'avg' | 'sum' | 'count';
+  aggregateFn: 'avg' | 'sum' | 'count' | 'count_distinct';
   dimensions: string[];
-  filter?: Record<string, FilterValue>;
+  filter?: Filter;
 }
 
 export interface DetailsQuery {
   columns?: string[];
-  filter?: Record<string, FilterValue>;
+  filter?: Filter;
   sort?: { column: string; direction?: 'asc' | 'desc' }[];
   limit?: number;
   offset?: number;
@@ -62,7 +66,11 @@ async function callServer(path: string, method: string, body?: unknown) {
     response = await doFetch(method);
   } catch (err) {
     if (method !== 'QUERY') throw err;
-    response = await doFetch('POST');
+    response = await doFetch('POST').catch(() => {
+      throw new Error(
+        `The aggregation server at ${BASE_URL} is not reachable.`,
+      );
+    });
   }
   const payload = await response.json();
   if (!response.ok) {

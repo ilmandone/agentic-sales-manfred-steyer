@@ -1,6 +1,7 @@
 import type {
   Column,
   Filter,
+  FilterScalar,
   FilterValue,
   SalesDal,
 } from '../data/sales-dal.ts';
@@ -72,15 +73,25 @@ function parseFilterEntry(
 }
 
 function parseFilterValue(value: unknown, column: Column): FilterValue {
-  if (
-    value === null ||
+  if (value === null || isFilterScalar(value)) {
+    return value;
+  }
+  if (Array.isArray(value) && value.length > 0 && value.every(isFilterScalar)) {
+    return value;
+  }
+  throw new BadRequest(
+    `Filter value for '${column.name}' must be a value or a non-empty list of values, ` +
+      'e.g. "Bags" or ["Bags", "Apparel"]. A filter can\'t exclude values: ' +
+      'load the rows without it and select them afterwards.',
+  );
+}
+
+function isFilterScalar(value: unknown): value is FilterScalar {
+  return (
     typeof value === 'string' ||
     typeof value === 'number' ||
     typeof value === 'boolean'
-  ) {
-    return value;
-  }
-  throw new BadRequest(`Filter value for '${column.name}' must be a scalar`);
+  );
 }
 
 export function parseInteger(

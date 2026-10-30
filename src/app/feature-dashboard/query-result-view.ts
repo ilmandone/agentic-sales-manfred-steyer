@@ -15,6 +15,12 @@ import { PivotTable } from '../shared/charts/pivot-table';
       <app-pie-chart [data]="result.data" />
     } @else if (result.kind === 'pivotTable') {
       <app-pivot-table [data]="result.data" />
+    } @else if (result.kind === 'split') {
+      <div class="split-charts">
+        @for (chart of result.charts; track $index) {
+          <app-query-result-view [result]="chart" />
+        }
+      </div>
     }
   `,
 })

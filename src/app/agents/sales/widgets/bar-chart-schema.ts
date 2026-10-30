@@ -18,4 +18,10 @@ export const barChartSchema = z.object({
   `),
 });
 
+export const barChartDescription = `
+  Shows values of one or two dimensions as a bar chart in the chat. Use it for comparisons
+  and trends, e.g. revenue per week or per country. For two dimensions, pass the second
+  one as series: the bars are grouped per label with one color per series (at most 8).
+`;
+
 export type BarChartArgs = z.infer<typeof barChartSchema>;

@@ -12,15 +12,22 @@ const MAX_LISTED_VALUES = 30;
 const EXAMPLE_COUNT = 5;
 const PLACEHOLDERS = ['(not set)', '<Other>', '(data deleted)'];
 
-export const AGGREGATE_FUNCTIONS = ['avg', 'sum', 'count'] as const;
-const AGGREGATE_SQL: Record<AggregateFn, string> = {
-  avg: 'AVG',
-  sum: 'SUM',
-  count: 'COUNT',
+export const AGGREGATE_FUNCTIONS = [
+  'avg',
+  'sum',
+  'count',
+  'count_distinct',
+] as const;
+const AGGREGATE_SQL: Record<AggregateFn, (column: string) => string> = {
+  avg: (column) => `AVG(${column})`,
+  sum: (column) => `SUM(${column})`,
+  count: (column) => `COUNT(${column})`,
+  count_distinct: (column) => `COUNT(DISTINCT ${column})`,
 };
 
 export type AggregateFn = (typeof AGGREGATE_FUNCTIONS)[number];
-export type FilterValue = string | number | boolean | null;
+export type FilterScalar = string | number | boolean;
+export type FilterValue = FilterScalar | FilterScalar[] | null;
 export type Filter = Record<string, FilterValue>;
 export type Row = Record<string, Json>;
 type Params = Record<string, DuckDBValue>;
@@ -190,12 +197,11 @@ function buildAggregateSql(
   findColumn: FindColumn,
   { fact, aggregateFn, dimensions, filter }: AggregateQuery,
 ) {
-  const fn = AGGREGATE_SQL[aggregateFn];
-  const factSql = quoteColumn(findColumn, fact);
+  const factSql = AGGREGATE_SQL[aggregateFn](quoteColumn(findColumn, fact));
   const dimSql = dimensions.map((d) => quoteColumn(findColumn, d)).join(', ');
   const { whereSql, params } = buildWhereClause(findColumn, filter);
   const sql =
-    `SELECT ${dimSql}, CAST(${fn}(${factSql}) AS DOUBLE) AS value ` +
+    `SELECT ${dimSql}, CAST(${factSql} AS DOUBLE) AS value ` +
     `FROM ${quoteIdent(table)}${whereSql} GROUP BY ${dimSql} ORDER BY ${dimSql}`;
   return { sql, params };
 }
@@ -255,6 +261,12 @@ function buildWhereClause(findColumn: FindColumn, filter: Filter) {
     const columnSql = quoteColumn(findColumn, column);
     if (value === null) {
       conditions.push(`${columnSql} IS NULL`);
+    } else if (Array.isArray(value)) {
+      const names = value.map((_, j) => `f${i}_${j}`);
+      conditions.push(
+        `${columnSql} IN (${names.map((n) => `$${n}`).join(', ')})`,
+      );
+      names.forEach((name, j) => (params[name] = value[j]));
     } else {
       conditions.push(`${columnSql} = $f${i}`);
       params[`f${i}`] = value;

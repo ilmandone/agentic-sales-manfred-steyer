@@ -2,12 +2,13 @@ import { Component, viewChild } from '@angular/core';
 import { CopilotChat, injectInterrupt } from '@copilotkit/angular';
 import { SALES_AGENT_ID } from '../agents/sales/sales-agent';
 import { InterruptList } from '../shared/interrupt-list';
+import { RunInfo } from '../shared/run-info';
 import { ExamplePrompt } from '../shared/utils/example-prompt';
 import { examplePrompts } from './example-prompts';
 
 @Component({
   selector: 'app-sales-chat',
-  imports: [CopilotChat, InterruptList],
+  imports: [CopilotChat, InterruptList, RunInfo],
   templateUrl: './sales-chat.html',
   styleUrl: './sales-chat.css',
 })

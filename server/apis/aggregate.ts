@@ -41,7 +41,8 @@ function parseAggregateFn(input: unknown): AggregateFn {
   const fn = AGGREGATE_FUNCTIONS.find((f) => f === name);
   if (!fn)
     throw new BadRequest(
-      `AggregateFn must be one of: ${AGGREGATE_FUNCTIONS.join(', ')}`,
+      `AggregateFn must be one of: ${AGGREGATE_FUNCTIONS.join(', ')}. ` +
+        'count_distinct counts the distinct values of the fact column.',
     );
   return fn;
 }
@@ -52,9 +53,13 @@ function parseFact(
   dal: Schema,
 ): string {
   const column = resolveColumn(input, 'Fact', dal);
-  if (aggregateFn !== 'count' && !column.numeric) {
+  if (
+    aggregateFn !== 'count' &&
+    aggregateFn !== 'count_distinct' &&
+    !column.numeric
+  ) {
     throw new BadRequest(
-      `Fact '${column.name}' (${column.type}) is not numeric; only 'count' is allowed on it`,
+      `Fact '${column.name}' (${column.type}) is not numeric; only 'count' and 'count_distinct' are allowed on it`,
     );
   }
   return column.name;

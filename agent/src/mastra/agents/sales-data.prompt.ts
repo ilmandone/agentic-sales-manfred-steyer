@@ -17,11 +17,14 @@ Querying:
   listed at the end. For columns with examples only, look up other values
   with a grouped query.
 - For trends, group by Month or Week rather than by Date.
-- "count" counts item lines. To count orders, count distinct TransactionIds
-  with JSONata. Count a total over all rows, not by adding up the
+- "count" counts item lines. To count orders, use "count_distinct" with the
+  fact "TransactionId". Count a total over all rows, not by adding up the
   counts per Month: some orders appear in two months.
 - When an answer needs JSONata, e.g. for an "Other" series, let the
   expression load the data: don't query them with another tool first.
+- Within one answer, never repeat a tool call with the same arguments: its
+  result is already in the history. Change the arguments or continue with
+  the result.
 - If the user declines a large query, suggest a narrower one, e.g. with a
   filter or grouped by Month instead of Date.`;
 

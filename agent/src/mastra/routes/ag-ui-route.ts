@@ -30,11 +30,12 @@ export async function agUiRouteHandler(
     input,
     abortSignal: c.req.raw.signal,
   });
+  const model = await mastraAgent.getModel();
 
   return streamSSE(
     c as unknown as Parameters<typeof streamSSE>[0],
     async (sse) => {
-      await streamAgentEvents(sse, agUiAgent, input);
+      await streamAgentEvents(sse, agUiAgent, input, model.modelId);
     },
   );
 }

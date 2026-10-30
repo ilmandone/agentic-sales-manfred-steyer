@@ -6,7 +6,11 @@ import {
 } from '@copilotkit/angular';
 import { PieChart } from '../../../shared/charts/pie-chart';
 import { LoadingIndicator } from '../../../shared/loading-indicator';
-import { PieChartArgs, pieChartSchema } from './pie-chart-schema';
+import {
+  PieChartArgs,
+  pieChartDescription,
+  pieChartSchema,
+} from './pie-chart-schema';
 
 @Component({
   selector: 'app-pie-chart-widget',
@@ -36,10 +40,7 @@ export class PieChartWidget implements ToolRenderer<PieChartArgs> {
 
 export const pieChartWidget: RegisterComponentConfig<PieChartArgs> = {
   name: 'pieChart',
-  description: `
-    Shows shares of a whole (sum or count, never avg) as a pie chart in the chat.
-    Use at most 8 slices and combine the smallest ones into a slice named "Other".
-  `,
+  description: pieChartDescription,
   parameters: pieChartSchema,
   component: PieChartWidget,
 };

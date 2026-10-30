@@ -10,15 +10,30 @@ The aggregation server also serves an SVG image for every product and category u
 
 ## Configuration
 
-The agent needs an OpenAI API key. Copy the template to `.env` and fill it in:
+The agent uses Gemma 4 26B, either from an Ollama server (default) or from Cloudflare Workers AI. Copy the template to `.env`:
 
 ```bash
 cp .env.example .env
 ```
 
+For Ollama, pull the model on the server (`ollama pull gemma4:26b-a4b-it-q8_0`) and set its URL if it is not `http://localhost:11434/v1`. For Cloudflare, set `MODEL_PROVIDER=cloudflare` and fill in your account id and an API token with Workers AI access:
+
 ```dotenv
-OPENAI_API_KEY=sk-...
+MODEL_PROVIDER=cloudflare
+CLOUDFLARE_ACCOUNT_ID=...
+CLOUDFLARE_API_TOKEN=...
 ```
+
+Settings:
+
+| Variable                      | Default                     | Meaning                                                                                                                                                                          |
+| ----------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MODEL_PROVIDER`              | `ollama`                    | `ollama` or `cloudflare`                                                                                                                                                         |
+| `MODEL_THINKING`              | `false`                     | `true` turns on the model's thinking                                                                                                                                             |
+| `MODEL_TEMPERATURE`           | `0`                         | Sampling temperature                                                                                                                                                             |
+| `OLLAMA_BASE_URL`             | `http://localhost:11434/v1` | OpenAI-compatible endpoint of the Ollama server                                                                                                                                  |
+| `OLLAMA_MODEL`                | `gemma4:26b-a4b-it-q8_0`    | Model name on the Ollama server                                                                                                                                                  |
+| `RETURN_TOOL_RESULT_TO_MODEL` | `model_decides`             | What `runQuery` returns to the model besides showing the chart: `full` returns the data, `minimal` returns only a note, `model_decides` lets the model ask for the data per call |
 
 ## Running the app
 
@@ -34,6 +49,18 @@ npm start
 | Aggregation server | 3000 | `npm run server` |
 | Mastra agent       | 4111 | `npm run agent`  |
 | Angular dev server | 4200 | `npm run client` |
+
+## Evaluation
+
+`npm run eval` sends the example prompts of both chats to the running agent, like the browser does, and checks the tool calls and the charts against reference values from the aggregation server. Start the app first.
+
+```bash
+npm run eval                          # all cases, 3 runs each
+npm run eval -- --runs 1              # one run per case
+npm run eval -- --case "per continent"  # cases whose name contains the text
+```
+
+The cases are in `eval/cases.ts`. Each run reports the model, the duration, failed tool calls and why a check failed.
 
 ## Branches
 
