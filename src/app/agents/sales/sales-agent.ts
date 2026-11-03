@@ -1,4 +1,3 @@
-import { registerTools } from '@angular/cli/src/commands/mcp/tools/tool-registry';
 import { registerComponent, registerFrontendTool } from '@copilotkit/angular';
 import { registerAgent } from '../../shared/utils/register-agent';
 import { explorerTool } from './tools/explorer-tool';
