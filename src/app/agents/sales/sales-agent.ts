@@ -1,4 +1,10 @@
+import { registerTools } from '@angular/cli/src/commands/mcp/tools/tool-registry';
+import { registerComponent, registerFrontendTool } from '@copilotkit/angular';
 import { registerAgent } from '../../shared/utils/register-agent';
+import { explorerTool } from './tools/explorer-tool';
+import { barChartWidget } from './widgets/bar-chart-widget';
+import { pieChartWidget } from './widgets/pie-chart-widget';
+import { pivotTableWidget } from './widgets/pivot-table-widget';
 
 export const SALES_AGENT_ID = 'salesAgent';
 
@@ -8,11 +14,10 @@ export function initSalesAgent(): void {
     agentId: SALES_AGENT_ID,
   });
 
-  // TODO #3: Register components:
-  //  - barChartWidget
-  //  - pieChartWidget
-  //  - pivotTableWidget
+  // NOTE: we specify agentId to make this widget component available only for this agent
+  registerComponent({ ...barChartWidget, agentId: SALES_AGENT_ID });
+  registerComponent({ ...pieChartWidget, agentId: SALES_AGENT_ID });
+  registerComponent({ ...pivotTableWidget, agentId: SALES_AGENT_ID });
 
-  // TODO #3: Register frontend tool
-  //  - explorerTool
+  registerFrontendTool({ ...explorerTool, agentId: SALES_AGENT_ID });
 }
