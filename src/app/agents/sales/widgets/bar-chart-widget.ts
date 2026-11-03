@@ -29,13 +29,11 @@ import { BarChartArgs, barChartSchema } from './bar-chart-schema';
 export class BarChartWidget implements ToolRenderer<BarChartArgs> {
   readonly toolCall = input.required<AngularToolCall<BarChartArgs>>();
 
-  // TODO #2: Check for valid args
   protected readonly hasValidArgs = computed(() =>
     isValid(this.toolCall().args),
   );
 }
 
-// TODO #2: Provide RegisterComponentConfig<BarChartArgs>
 // Description:
 //     Shows values of one or two dimensions as a bar chart in the chat. Use it for comparisons
 //     and trends, e.g. revenue per week or per country. For two dimensions, pass the second
