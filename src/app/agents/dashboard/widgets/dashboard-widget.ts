@@ -19,7 +19,7 @@ import { RunQueryArgs, runQuerySchema } from './dashboard-widget-schema';
     @let status = toolCall().status;
     <div class="not-prose">
       @if (result?.kind === 'message') {
-        <p class="hint">Can't show this visualization: {{ result.message }}</p>
+        <p class="hint">Can't show this visualization: {{ result?.message }}</p>
       } @else if (result) {
         <app-query-result-view [result]="result" />
       } @else if (status === 'complete') {
@@ -40,11 +40,8 @@ import { RunQueryArgs, runQuerySchema } from './dashboard-widget-schema';
     </div>
   `,
 })
-export class DashboardWidget {
-  // TODO #7 implement ToolRenderer<RunQueryArgs>
-
-  // TODO #7: Type with AngularToolCall<RunQueryArgs>
-  readonly toolCall = input.required<any>();
+export class DashboardWidget implements ToolRenderer<RunQueryArgs> {
+  readonly toolCall = input.required<AngularToolCall<RunQueryArgs>>();
 
   private readonly dashboardStore = inject(DashboardStore);
 
