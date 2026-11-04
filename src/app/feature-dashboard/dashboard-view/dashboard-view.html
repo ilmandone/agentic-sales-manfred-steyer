@@ -14,6 +14,9 @@
   </header>
   <div class="tiles">
     <!-- TODO #13: iterate (dashboard) items and call app-dashboard-tile -->
+    @for (item of items(); track item.id) {
+      <app-dashboard-tile [spec]="item.spec" />
+    }
   </div>
 </section>
 @if (chatVisible()) {
@@ -25,7 +28,7 @@
       </button>
     </div>
 
-    <!-- TODO #9: Call copilot-chat -->
+    <copilot-chat [agentId]="agentId" />
 
     <div class="examples" role="group" aria-label="Example requests">
       @for (example of examples; track example.label) {

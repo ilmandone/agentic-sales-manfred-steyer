@@ -69,8 +69,8 @@ function parseResult(json: string | undefined): QueryResult | undefined {
   return result.data;
 }
 
-// TODO #7: Provide RenderToolCallConfig<RunQueryArgs>
-//    toolName: runQuery
-//    component: DashboardWidget
-//    schema: runQuerySchema
-export const dashboardWidget = {};
+export const dashboardWidget: RenderToolCallConfig<RunQueryArgs> = {
+  name: 'runQuery', // We must the name of the server side tool that will be executed
+  args: runQuerySchema,
+  component: DashboardWidget,
+};

@@ -1,22 +1,28 @@
 import { computed, Service, signal } from '@angular/core';
+import { injectAgentStore } from '@copilotkit/angular';
 import {
   Dashboard,
   DashboardItem,
   initialDashboard,
 } from '@shared/dashboard-schema';
+import { DASHBOARD_AGENT_ID } from '../../agents/dashboard/dashboard-agent';
 
 const STORAGE_KEY = 'dashboard';
 
 @Service()
 export class DashboardStore {
-  // TODO #11: inject dashboard agent store (DASHBOARD_AGENT_ID)
+  readonly agentStore = injectAgentStore(DASHBOARD_AGENT_ID);
 
-  // TODO #11: project to state in agent store
-  readonly state = computed(() => initialDashboard as Dashboard);
+  readonly state = computed(() => this.agentStore().state() as Dashboard);
   readonly items = computed(() => this.state().items);
   readonly hasSavedState = signal(localStorage.getItem(STORAGE_KEY) !== null);
 
-  addItem(_item: DashboardItem): void {
-    // TODO #11: add item to agent store
+  addItem(item: DashboardItem): void {
+    const dashboard = this.state();
+    const newDashboard: Dashboard = {
+      items: [...dashboard.items, item],
+    };
+
+    this.agentStore().agent.setState(newDashboard);
   }
 }
